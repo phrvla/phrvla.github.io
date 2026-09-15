@@ -1,0 +1,2075 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="day">
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="PHR-VLA: Planning Horizon Reasoning for Vision-Language-Action Models. Privileged latent dynamics alignment improves anticipatory reasoning in VLA policies on LIBERO, Meta-World, and real-world disassembly.">
+  <meta name="keywords" content="PHR-VLA, Vision-Language-Action, VLA, planning horizon reasoning, privileged representations, robot manipulation, LIBERO, Meta-World, SmolVLA">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PHR-VLA: Planning Horizon Reasoning for Vision-Language-Action Models</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css?v=20260821a">
+  <link rel="stylesheet" href="./static/css/site-polish.css?v=20260821a">
+  <link rel="icon" href="./static/images/favicon.svg">
+
+  <script>
+    /* restore the reader's theme before first paint so there is no flash */
+    (function () {
+      try {
+        var t = localStorage.getItem('phrvla-theme');
+        if (t === 'night' || t === 'day') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/index.js?v=20260821a"></script>
+  <script src="./static/js/charts.js?v=20260821a"></script>
+  <script src="./static/js/archviz.js?v=20260821a" defer></script>
+  <script defer src="./static/js/site-polish.js?v=20260821a"></script>
+</head>
+<body>
+
+<!-- ===================== NAV ===================== -->
+<nav class="nav" aria-label="Page navigation">
+  <div class="nav__in">
+    <a class="nav__brand" href="#top">PHR-VLA</a>
+    <span class="nav__title" aria-hidden="true">Planning Horizon Reasoning for Vision-Language-Action Models</span>
+    <div class="nav__links">
+      <a href="#abstract">Abstract</a>
+      <a href="#method">Method</a>
+      <a href="#results">Results</a>
+      <a href="#ablation">Ablations</a>
+      <a href="#realworld">Real-World</a>
+    </div>
+    <div class="nav__actions">
+      <a class="navbtn navbtn--pending" href="#" title="Paper under review">Paper<em>Under Review</em></a>
+      <a class="navbtn navbtn--pending" href="#" title="Code release coming soon">Code<em>Coming Soon</em></a>
+      <a class="navbtn" href="#bibtex" title="Citation details">BibTeX</a>
+      <button class="themebtn" type="button" id="theme-toggle" aria-label="Switch between light and dark" title="Switch theme">
+        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ===================== OUTLINE RAIL ===================== -->
+<aside class="rail" aria-label="On this page">
+  <nav class="rail__links">
+    <a data-level="1" href="#top">Title</a>
+    <a data-level="1" href="#abstract">Abstract</a>
+    <a data-level="1" href="#overview">Overview</a>
+    <a data-level="1" href="#method">Method</a>
+    <a data-level="1" href="#part-1">What It Does</a>
+    <a data-level="2" data-part="part-1" href="#results">Results</a>
+    <a data-level="2" data-part="part-1" href="#realworld">Real-World</a>
+    <a data-level="1" href="#part-2">How It Compares</a>
+    <a data-level="2" data-part="part-2" href="#ablation">Ablations</a>
+    <a data-level="1" href="#conclusion">Conclusion</a>
+    <a data-level="1" href="#bibtex">BibTeX</a>
+  </nav>
+</aside>
+
+<main id="top">
+
+<!-- ===================== CINEMATIC STAGE ===================== -->
+<section class="stage" aria-label="Teaser video">
+  <video class="stage__media stage__video" src="./static/videos/task4.mp4" poster="./static/images/posters/task4.jpg"
+         autoplay loop muted playsinline preload="auto"
+         aria-label="PHR-VLA autonomously performing Task IV, a contact-rich twist-and-extract disassembly, on a real Franka Emika Panda arm"></video>
+  <div class="stage__scrim"></div>
+  <button class="stage__expand" type="button" id="stage-expand" aria-label="Expand teaser video">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+  </button>
+  <div class="stage__cue">
+    <span>Scroll to explore</span>
+    <i class="fas fa-chevron-down"></i>
+  </div>
+</section>
+
+<!-- ===================== HERO (title block) ===================== -->
+<header class="hero">
+  <div class="wrap wrap--mid">
+    <p class="eyebrow">Anonymous Submission &middot; 2026</p>
+
+    <h1 class="hero__title"><span class="mark">PHR-VLA</span>: Planning Horizon Reasoning for Vision-Language-Action Models</h1>
+
+    <p class="hero__tagline">Privileged latent dynamics as training-time supervision only &mdash; a future head aligned
+    to short-horizon, contact-centric scene change, discarded entirely before deployment.</p>
+
+    <div class="is-size-5 publication-authors">Anonymous Authors</div>
+
+    <div class="publication-links" style="margin-top:1.4rem;">
+      <a href="#" class="hero-btn disabled" title="Paper under review">
+        <span class="icon"><i class="fas fa-file-pdf"></i></span><span>Paper (Under Review)</span>
+      </a>
+      <a href="#" class="hero-btn disabled" title="Code release coming soon">
+        <span class="icon"><i class="fab fa-github"></i></span><span>Code (Coming Soon)</span>
+      </a>
+      <a href="#bibtex" class="hero-btn" title="Citation details">
+        <span class="icon"><i class="fas fa-quote-right"></i></span><span>BibTeX</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+
+<!-- ===================== ABSTRACT ===================== -->
+<section class="sec sec-white" id="abstract">
+  <div class="wrap wrap--mid reveal-block">
+    <h2 class="sec-heading">Abstract</h2>
+    <div class="content has-text-justified" style="font-size:0.97rem; line-height:1.75; color:var(--ink-dim);">
+      <p>
+        Vision-language-action models (VLAs) have shown strong promise for general-purpose robotic
+        manipulation by mapping language instructions and vision observations directly to actions.
+        However, most VLAs primarily condition action prediction on current observations and lack an
+        explicit mechanism for reasoning over future task dynamics, which is particularly important for
+        fine-grained, contact-rich manipulation. We present <strong>PHR-VLA</strong>, a framework that
+        enables planning-horizon reasoning in VLAs through privileged latent representations of future
+        dynamics. PHR-VLA introduces a lightweight auxiliary future head that, during training, aligns
+        the VLA&rsquo;s internal representations with latent dynamics extracted from future observations.
+        Evaluation results demonstrate that the most effective planning horizon signals are short-horizon,
+        local, and contact-centric. Patch-level latent dynamics supervision from the wrist camera
+        improves success rate on LIBERO from 84.1% to 88.4% and on real-world disassembly tasks from
+        63.3% to 82.5%. Patch-level supervision from a third-person camera also improves performance on
+        Meta-World from 56.70% to 57.8%. These results demonstrate that privileged latent dynamics
+        alignment provides an effective training signal for improving anticipatory reasoning in VLA
+        policies.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===================== OVERVIEW / HIGHLIGHTS ===================== -->
+<section class="sec sec-gray" id="overview">
+  <div class="wrap reveal-block">
+    <div class="fmp-highlight-shell">
+      <div class="highlight-kicker">Overview</div>
+      <h3>Reason over the future without paying for it at inference time.</h3>
+      <p class="highlight-lead">
+        PHR-VLA aligns action-token representations with privileged latent dynamics computed from
+        planning-horizon demonstration frames during training, then discards the future head and
+        auxiliary encoder entirely at deployment.
+      </p>
+
+      <div class="highlight-grid">
+        <div class="highlight-card primary">
+          <span class="highlight-icon"><i class="fas fa-bullseye"></i></span>
+          <strong>84.1% &rarr; 88.4%</strong>
+          <p>LIBERO average success rate, with wrist-camera patch-level latent dynamics supervision.</p>
+        </div>
+        <div class="highlight-card">
+          <span class="highlight-icon"><i class="fas fa-tools"></i></span>
+          <strong>63.3% &rarr; 82.5%</strong>
+          <p>real-world contact-rich disassembly success rate on a Franka Emika Panda arm.</p>
+        </div>
+        <div class="highlight-card">
+          <span class="highlight-icon"><i class="fas fa-globe-americas"></i></span>
+          <strong>56.7% &rarr; 57.8%</strong>
+          <p>Meta-World average success rate with third-person patch-level supervision.</p>
+        </div>
+        <div class="highlight-card">
+          <span class="highlight-icon"><i class="fas fa-bolt"></i></span>
+          <strong>Zero</strong>
+          <p>inference-time latency or memory overhead &mdash; the future head is only used during training.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap wrap--wide" style="margin-top:1.6rem;">
+    <div class="perfboard reveal-block">
+      <div class="perfboard__title">PHR-VLA overall performance</div>
+
+      <div class="perfboard__head">
+        <span></span>
+        <span>LIBERO</span>
+        <span>Meta-World</span>
+        <span>Real-World</span>
+      </div>
+
+      <div class="perfboard__row perfboard__row--ours">
+        <span class="perfboard__name">PHR-VLA <em>SigLIP</em></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:88.4%"></span></span><b>88.4<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:57.8%"></span></span><b>57.8<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:82.5%"></span></span><b>82.5<small>%</small></b></span>
+      </div>
+      <div class="perfboard__row perfboard__row--ours">
+        <span class="perfboard__name">PHR-VLA <em>JEPA</em></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:86.2%"></span></span><b>86.2<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:59.8%"></span></span><b>59.8<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:77.5%"></span></span><b>77.5<small>%</small></b></span>
+      </div>
+
+      <div class="perfboard__sep"></div>
+
+      <div class="perfboard__row">
+        <span class="perfboard__name">SmolVLA</span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:84.1%"></span></span><b>84.1<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:56.7%"></span></span><b>56.7<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:63.3%"></span></span><b>63.3<small>%</small></b></span>
+      </div>
+      <div class="perfboard__row">
+        <span class="perfboard__name">Diffusion Policy</span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:72.4%"></span></span><b>72.4<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:10.5%"></span></span><b>10.5<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:51.7%"></span></span><b>51.7<small>%</small></b></span>
+      </div>
+      <div class="perfboard__row">
+        <span class="perfboard__name">ACT</span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:24.2%"></span></span><b>24.2<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:49.0%"></span></span><b>49.0<small>%</small></b></span>
+        <span class="perfboard__cell"><span class="perfboard__track"><span class="perfboard__fill" style="--pct:35.8%"></span></span><b>35.8<small>%</small></b></span>
+      </div>
+
+      <p class="perfboard__cap">PHR-VLA over the strongest baseline (SmolVLA), panel by panel &mdash; success
+      rate <b>1.05&times;</b>, <b>1.05&times;</b>, <b>1.30&times;</b>. Bars show average success rate on each
+      domain.</p>
+
+      <details class="dtab">
+        <summary>View as table</summary>
+        <div class="dtab__scroll">
+          <table>
+            <thead>
+              <tr><th scope="col">Method</th><th scope="col">LIBERO</th><th scope="col">Meta-World</th><th scope="col">Real-World</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">PHR-VLA (SigLIP)</th><td>88.4%</td><td>57.8%</td><td>82.5%</td></tr>
+              <tr><th scope="row">PHR-VLA (JEPA)</th><td>86.2%</td><td>59.8%</td><td>77.5%</td></tr>
+              <tr><th scope="row">SmolVLA</th><td>84.1%</td><td>56.7%</td><td>63.3%</td></tr>
+              <tr><th scope="row">Diffusion Policy</th><td>72.4%</td><td>10.5%</td><td>51.7%</td></tr>
+              <tr><th scope="row">ACT</th><td>24.2%</td><td>49.0%</td><td>35.8%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===================== METHOD ===================== -->
+<section class="sec sec-white" id="method">
+  <div class="wrap">
+    <h2 class="sec-heading">Method</h2>
+
+    <div class="method-story reveal-block">
+      <div class="method-copy">
+        <div class="highlight-kicker">Method</div>
+        <h3>Supervise how the scene changes, not what it looks like.</h3>
+        <p>
+          Rather than predicting a single absolute future observation, PHR-VLA supervises the
+          <em>change</em> in latent scene representation over the planning horizon &mdash; the latent dynamics
+          between consecutive frozen-encoder embeddings of future frames.
+        </p>
+        <div class="formula-pill">
+          y<sub>t:t+H</sub> = s<sub>t+1:t+H</sub> &minus; s<sub>t:t+H&minus;1</sub>
+        </div>
+      </div>
+      <div class="method-steps">
+        <div class="method-step">
+          <span>1</span>
+          <h4>Encode Future Frames</h4>
+          <p>Planning-horizon camera frames I<sub>t+1:t+H</sub> are passed through a frozen vision encoder to compute latent targets.</p>
+        </div>
+        <div class="method-step">
+          <span>2</span>
+          <h4>Compute Latent Dynamics</h4>
+          <p>Consecutive latents are subtracted to form a target that emphasizes scene change rather than static content.</p>
+        </div>
+        <div class="method-step">
+          <span>3</span>
+          <h4>Align Action-Token Latents</h4>
+          <p>An auxiliary future head predicts the latent dynamics from the VLA's action-token representations, supervised by L<sub>Align</sub>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive architecture configurator -->
+    <div class="archviz reveal-block" id="archviz">
+      <div class="archviz__head">
+        <div class="archviz__label">PHR-VLA architecture</div>
+      </div>
+      <div class="archviz__body">
+
+        <!-- left: real paper figure (Fig. 2) -->
+        <div class="archviz__diagram">
+          <div class="archviz__figrow">
+            <img src="./static/images/method-figure.png" alt="PHR-VLA framework: privileged finetuning with a future head aligned to latent dynamics during training (left), and efficient inference using only the action head (right)">
+            <p class="archviz__figcap">
+              <strong>Fig. 2 &mdash; PHR-VLA Framework.</strong> <em>Privileged Finetuning</em> (left):
+              planning-horizon frames are encoded by a frozen vision encoder to compute latent-dynamics
+              targets that supervise an auxiliary future head. <em>Efficient Inference</em> (right): the
+              action head runs exactly as in the base VLA.
+            </p>
+          </div>
+        </div>
+
+        <!-- right: readouts + controls -->
+        <div class="archviz__ctl maskctl2">
+          <div class="readout readout--av">
+            <div class="readout__cell">
+              <div class="readout__lab">Added Inference Cost</div>
+              <div class="readout__val" id="av-lat">0<span class="unit">ms</span></div>
+              <div class="readout__note" id="av-lat-note">Future head &amp; frozen encoder are training-only.</div>
+            </div>
+            <div class="readout__cell readout__cell--sr">
+              <div class="readout__lab">LIBERO Success Rate</div>
+              <div class="readout__val" id="av-sr">88.4<span class="unit">%</span></div>
+              <div class="readout__note" id="av-sr-note">+4.3 points over SmolVLA.</div>
+            </div>
+          </div>
+
+          <div class="maskline maskline--quick">
+            <span class="maskline__lab">jump to</span>
+            <span class="maskline__set maskline__set--wrap">
+              <button class="regimechip active" type="button" data-preset="wrist" aria-pressed="true">Wrist (ours)</button>
+              <button class="regimechip" type="button" data-preset="tp" aria-pressed="false">Third-Person</button>
+              <button class="regimechip" type="button" data-preset="multicam" aria-pressed="false">Multicam</button>
+              <button class="regimechip" type="button" data-preset="inference" aria-pressed="false">Inference</button>
+            </span>
+          </div>
+
+          <div class="maskline">
+            <span class="maskline__lab">future target source</span>
+            <span class="maskline__set">
+              <button class="maskbtn" type="button" data-cam="wrist" style="--dot:var(--s-rgb)" aria-pressed="true" title="Wrist camera">W</button>
+              <button class="maskbtn" type="button" data-cam="tp" style="--dot:var(--s-dino)" aria-pressed="false" title="Third-person camera">T</button>
+              <button class="maskbtn" type="button" data-cam="multicam" style="--dot:var(--s-3d)" aria-pressed="false" title="Both cameras concatenated">M</button>
+            </span>
+          </div>
+          <div class="maskline">
+            <span class="maskline__lab">future head</span>
+            <span class="maskline__set">
+              <button class="maskbtn maskbtn--wide" type="button" data-mode="train" aria-pressed="true" title="Privileged finetuning">Training</button>
+              <button class="maskbtn maskbtn--wide" type="button" data-mode="infer" aria-pressed="false" title="Efficient inference">Inference</button>
+            </span>
+          </div>
+
+          <div class="regimeout">
+            <span class="regimeout__name" id="av-regime-name">Wrist-camera training (ours)</span>
+          </div>
+          <p class="archviz__regimenote" id="av-regime-note">
+            The wrist camera supplies the planning-horizon target during training &mdash; the largest gain
+            (88.4% on LIBERO) because it captures the short-range, contact-centric interactions most
+            relevant to the task.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="subsec-heading">Training Setup</h3>
+    <div class="content" style="font-size:0.95rem; line-height:1.72; color:var(--ink-dim);">
+      <p>
+        We adopt <strong>SmolVLA (0.45B)</strong> as our VLA baseline, which couples a compact SmolVLM-2
+        backbone with a flow-matching action expert. We fine-tune on a single NVIDIA A100 GPU, which enables
+        controlled ablations of the planning-horizon dynamics-aware alignment objective
+        L<sub>PHR-VLA</sub> = L<sub>VLA</sub> + &lambda;L<sub>Align</sub>. The same training setup is used for
+        SmolVLA and all PHR-VLA ablation variants to ensure a fair comparison.
+      </p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ===================== PART I: WHAT IT DOES ===================== -->
+<div class="part sec-gray" id="part-1">
+  <div class="wrap wrap--wide reveal-block">
+    <div class="part__in">
+      <div class="part__head">
+        <div class="part__n">Part I</div>
+        <h2 class="part__t">What PHR-VLA Does</h2>
+      </div>
+      <p class="part__d">Consistent gains over SmolVLA and every baseline across two simulation benchmarks and
+      a real-world disassembly suite &mdash; at zero added inference cost.</p>
+    </div>
+  </div>
+
+  <!-- ===================== RESULTS ===================== -->
+  <div class="wrap wrap--wide" id="results" style="padding-top:2.2rem;">
+    <h3 class="subsec-heading" style="margin-top:0;"><span class="sec__no">01</span>Results</h3>
+
+    <div class="content" style="font-size:0.95rem; line-height:1.72; color:var(--ink-dim);">
+      <p>
+        We evaluate PHR-VLA against ACT, Diffusion Policy, Octo, DiT Policy, OpenVLA, TinyVLA, and SmolVLA
+        across two multi-task simulation benchmarks &mdash; <strong>LIBERO</strong> and <strong>Meta-World</strong> &mdash;
+        and a real-world contact-rich disassembly task suite. PHR-VLA uses patch-level, wrist-camera,
+        latent-dynamics supervision at &lambda; = 0.02 as the default configuration.
+      </p>
+    </div>
+
+    <h4 class="subsec-heading">LIBERO</h4>
+    <div class="reveal-block">
+      <div class="fmp-bar-chart" data-chart="libero"></div>
+    </div>
+    <div class="tbl-scroll">
+      <table class="bt">
+        <thead>
+          <tr><th class="left">Method</th><th>Spatial &uarr;</th><th>Object &uarr;</th><th>Goal &uarr;</th><th>Long &uarr;</th><th>Average &uarr;</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="left">ACT</td><td>30.7%</td><td>48.4%</td><td>2.0%</td><td>15.7%</td><td>24.2%</td></tr>
+          <tr><td class="left">Diffusion Policy</td><td>78.3%</td><td>92.5%</td><td>68.3%</td><td>50.5%</td><td>72.4%</td></tr>
+          <tr><td class="left">Octo</td><td>78.9%</td><td>85.7%</td><td>84.6%</td><td>51.1%</td><td>75.1%</td></tr>
+          <tr><td class="left">DiT Policy</td><td>84.2%</td><td>96.3%</td><td>85.4%</td><td>63.8%</td><td>82.4%</td></tr>
+          <tr><td class="left">OpenVLA</td><td>84.7%</td><td>88.4%</td><td>79.2%</td><td>53.7%</td><td>76.5%</td></tr>
+          <tr><td class="left">SmolVLA</td><td>86.0%</td><td>97.7%</td><td>86.7%</td><td>66.0%</td><td>84.1%</td></tr>
+          <tr class="ours"><td class="left">PHR-VLA (ours)</td><td><span class="bv">88.7%</span></td><td><span class="bv">98.0%</span></td><td><span class="bv">92.4%</span></td><td><span class="bv">74.4%</span></td><td><span class="bv">88.4%</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tbl-cap">Success rates across four LIBERO task suites (300 trials per suite). The gains are most pronounced on LIBERO-Long, where PHR-VLA improves performance by +8 points.</p>
+
+    <h4 class="subsec-heading">Meta-World</h4>
+    <div class="reveal-block">
+      <div class="fmp-bar-chart" data-chart="metaworld"></div>
+    </div>
+    <div class="tbl-scroll">
+      <table class="bt">
+        <thead>
+          <tr><th class="left">Method</th><th>Easy &uarr;</th><th>Medium &uarr;</th><th>Hard &uarr;</th><th>Very Hard &uarr;</th><th>Average &uarr;</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="left">ACT</td><td>68.2%</td><td>49.7%</td><td>28.9%</td><td>49.4%</td><td>49.0%</td></tr>
+          <tr><td class="left">Diffusion Policy</td><td>23.1%</td><td>10.7%</td><td>1.9%</td><td>6.1%</td><td>10.5%</td></tr>
+          <tr><td class="left">TinyVLA</td><td>77.6%</td><td>21.5%</td><td>11.4%</td><td>15.8%</td><td>31.6%</td></tr>
+          <tr><td class="left">SmolVLA</td><td>82.0%</td><td>54.2%</td><td>43.9%</td><td>46.7%</td><td>56.7%</td></tr>
+          <tr class="ours"><td class="left">PHR-VLA (ours)</td><td><span class="bv">85.2%</span></td><td><span class="bv">55.1%</span></td><td><span class="bv">45.5%</span></td><td>45.3%</td><td><span class="bv">57.8%</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tbl-cap">Success rates across all Meta-World difficulty levels. Because Meta-World provides only a third-person view, wrist-camera fine-grained supervision is unavailable in this domain.</p>
+  </div>
+
+  <!-- ===================== REAL WORLD ===================== -->
+  <div class="wrap wrap--wide" id="realworld" style="padding-top:3rem; padding-bottom:1rem;">
+    <h3 class="subsec-heading" style="margin-top:0;"><span class="sec__no">02</span>Real-World Deployment</h3>
+
+    <div class="content" style="font-size:0.95rem; line-height:1.72; color:var(--ink-dim);">
+      <p>
+        We deploy PHR-VLA on a 7-DoF Franka Emika Panda arm with parallel grippers, using a fixed
+        third-view camera and a wrist-mounted camera. We design four contact-rich disassembly tasks that
+        each require fine-grained adjustments for successful completion, and collect 100 human
+        teleoperation demonstrations per task at 10&nbsp;Hz.
+      </p>
+    </div>
+
+    <!-- Task tabs -->
+    <div class="sec-tab-nav" role="tablist" style="margin-top:1.4rem;">
+      <button class="sec-tab active" data-panel="rw-panel-1">Task I</button>
+      <button class="sec-tab" data-panel="rw-panel-2">Task II</button>
+      <button class="sec-tab" data-panel="rw-panel-3">Task III</button>
+      <button class="sec-tab" data-panel="rw-panel-4">Task IV</button>
+    </div>
+    <div class="sec-panel" id="rw-panel-1">
+      <p class="sec-panel-desc"><strong>Task I &mdash; Press &amp; Release Clip.</strong> Press the clip to release the object, remove it, then place it in the purple container.</p>
+      <h4 class="subsec-heading" style="margin-top:0;">Success</h4>
+      <div class="taskstrip" data-autoscroll="1">
+        <div class="taskstrip__track">
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_1.jpg">
+              <source src="./static/videos/realworld/t1_success_1.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_2.jpg">
+              <source src="./static/videos/realworld/t1_success_2.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_3.jpg">
+              <source src="./static/videos/realworld/t1_success_3.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_4.jpg">
+              <source src="./static/videos/realworld/t1_success_4.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_5.jpg">
+              <source src="./static/videos/realworld/t1_success_5.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_6.jpg">
+              <source src="./static/videos/realworld/t1_success_6.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_7.jpg">
+              <source src="./static/videos/realworld/t1_success_7.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_8.jpg">
+              <source src="./static/videos/realworld/t1_success_8.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_9.jpg">
+              <source src="./static/videos/realworld/t1_success_9.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_10.jpg">
+              <source src="./static/videos/realworld/t1_success_10.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_11.jpg">
+              <source src="./static/videos/realworld/t1_success_11.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_12.jpg">
+              <source src="./static/videos/realworld/t1_success_12.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_13.jpg">
+              <source src="./static/videos/realworld/t1_success_13.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_14.jpg">
+              <source src="./static/videos/realworld/t1_success_14.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_15.jpg">
+              <source src="./static/videos/realworld/t1_success_15.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_16.jpg">
+              <source src="./static/videos/realworld/t1_success_16.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_17.jpg">
+              <source src="./static/videos/realworld/t1_success_17.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_18.jpg">
+              <source src="./static/videos/realworld/t1_success_18.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_19.jpg">
+              <source src="./static/videos/realworld/t1_success_19.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_20.jpg">
+              <source src="./static/videos/realworld/t1_success_20.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_21.jpg">
+              <source src="./static/videos/realworld/t1_success_21.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_22.jpg">
+              <source src="./static/videos/realworld/t1_success_22.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_23.jpg">
+              <source src="./static/videos/realworld/t1_success_23.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_24.jpg">
+              <source src="./static/videos/realworld/t1_success_24.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_25.jpg">
+              <source src="./static/videos/realworld/t1_success_25.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_26.jpg">
+              <source src="./static/videos/realworld/t1_success_26.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_27.jpg">
+              <source src="./static/videos/realworld/t1_success_27.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_28.jpg">
+              <source src="./static/videos/realworld/t1_success_28.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_29.jpg">
+              <source src="./static/videos/realworld/t1_success_29.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_30.jpg">
+              <source src="./static/videos/realworld/t1_success_30.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_31.jpg">
+              <source src="./static/videos/realworld/t1_success_31.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_32.jpg">
+              <source src="./static/videos/realworld/t1_success_32.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_33.jpg">
+              <source src="./static/videos/realworld/t1_success_33.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_34.jpg">
+              <source src="./static/videos/realworld/t1_success_34.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_35.jpg">
+              <source src="./static/videos/realworld/t1_success_35.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_36.jpg">
+              <source src="./static/videos/realworld/t1_success_36.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_37.jpg">
+              <source src="./static/videos/realworld/t1_success_37.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_38.jpg">
+              <source src="./static/videos/realworld/t1_success_38.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_39.jpg">
+              <source src="./static/videos/realworld/t1_success_39.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_success_40.jpg">
+              <source src="./static/videos/realworld/t1_success_40.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        </div>
+      </div>
+      <h4 class="subsec-heading">Failure</h4>
+      <div class="taskstrip" data-autoscroll="1">
+        <div class="taskstrip__track">
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_failure_1.jpg">
+              <source src="./static/videos/realworld/t1_failure_1.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_failure_2.jpg">
+              <source src="./static/videos/realworld/t1_failure_2.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_failure_3.jpg">
+              <source src="./static/videos/realworld/t1_failure_3.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_failure_4.jpg">
+              <source src="./static/videos/realworld/t1_failure_4.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_failure_5.jpg">
+              <source src="./static/videos/realworld/t1_failure_5.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t1_failure_6.jpg">
+              <source src="./static/videos/realworld/t1_failure_6.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        </div>
+      </div>
+    </div>
+    <div class="sec-panel sec-panel-hidden" id="rw-panel-2">
+      <p class="sec-panel-desc"><strong>Task II &mdash; Loose Shaft Removal.</strong> Remove the object from the loose shaft, then place it in the purple container.</p>
+      <h4 class="subsec-heading" style="margin-top:0;">Success</h4>
+      <div class="taskstrip" data-autoscroll="1">
+        <div class="taskstrip__track">
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_1.jpg">
+              <source src="./static/videos/realworld/t2_success_1.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_2.jpg">
+              <source src="./static/videos/realworld/t2_success_2.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_3.jpg">
+              <source src="./static/videos/realworld/t2_success_3.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_4.jpg">
+              <source src="./static/videos/realworld/t2_success_4.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_5.jpg">
+              <source src="./static/videos/realworld/t2_success_5.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_6.jpg">
+              <source src="./static/videos/realworld/t2_success_6.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_7.jpg">
+              <source src="./static/videos/realworld/t2_success_7.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_8.jpg">
+              <source src="./static/videos/realworld/t2_success_8.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_9.jpg">
+              <source src="./static/videos/realworld/t2_success_9.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_10.jpg">
+              <source src="./static/videos/realworld/t2_success_10.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_11.jpg">
+              <source src="./static/videos/realworld/t2_success_11.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_12.jpg">
+              <source src="./static/videos/realworld/t2_success_12.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_13.jpg">
+              <source src="./static/videos/realworld/t2_success_13.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_14.jpg">
+              <source src="./static/videos/realworld/t2_success_14.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_15.jpg">
+              <source src="./static/videos/realworld/t2_success_15.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_16.jpg">
+              <source src="./static/videos/realworld/t2_success_16.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_17.jpg">
+              <source src="./static/videos/realworld/t2_success_17.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_18.jpg">
+              <source src="./static/videos/realworld/t2_success_18.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_19.jpg">
+              <source src="./static/videos/realworld/t2_success_19.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_20.jpg">
+              <source src="./static/videos/realworld/t2_success_20.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_21.jpg">
+              <source src="./static/videos/realworld/t2_success_21.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_22.jpg">
+              <source src="./static/videos/realworld/t2_success_22.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_23.jpg">
+              <source src="./static/videos/realworld/t2_success_23.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_24.jpg">
+              <source src="./static/videos/realworld/t2_success_24.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_25.jpg">
+              <source src="./static/videos/realworld/t2_success_25.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_26.jpg">
+              <source src="./static/videos/realworld/t2_success_26.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_27.jpg">
+              <source src="./static/videos/realworld/t2_success_27.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_28.jpg">
+              <source src="./static/videos/realworld/t2_success_28.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_29.jpg">
+              <source src="./static/videos/realworld/t2_success_29.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_30.jpg">
+              <source src="./static/videos/realworld/t2_success_30.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_31.jpg">
+              <source src="./static/videos/realworld/t2_success_31.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_32.jpg">
+              <source src="./static/videos/realworld/t2_success_32.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_33.jpg">
+              <source src="./static/videos/realworld/t2_success_33.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_34.jpg">
+              <source src="./static/videos/realworld/t2_success_34.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_success_35.jpg">
+              <source src="./static/videos/realworld/t2_success_35.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        </div>
+      </div>
+      <h4 class="subsec-heading">Failure</h4>
+      <div class="taskstrip" data-autoscroll="1">
+        <div class="taskstrip__track">
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_1.jpg">
+              <source src="./static/videos/realworld/t2_failure_1.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_2.jpg">
+              <source src="./static/videos/realworld/t2_failure_2.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_3.jpg">
+              <source src="./static/videos/realworld/t2_failure_3.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_4.jpg">
+              <source src="./static/videos/realworld/t2_failure_4.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_5.jpg">
+              <source src="./static/videos/realworld/t2_failure_5.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_6.jpg">
+              <source src="./static/videos/realworld/t2_failure_6.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_7.jpg">
+              <source src="./static/videos/realworld/t2_failure_7.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_8.jpg">
+              <source src="./static/videos/realworld/t2_failure_8.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_9.jpg">
+              <source src="./static/videos/realworld/t2_failure_9.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_10.jpg">
+              <source src="./static/videos/realworld/t2_failure_10.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_11.jpg">
+              <source src="./static/videos/realworld/t2_failure_11.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_12.jpg">
+              <source src="./static/videos/realworld/t2_failure_12.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_13.jpg">
+              <source src="./static/videos/realworld/t2_failure_13.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_14.jpg">
+              <source src="./static/videos/realworld/t2_failure_14.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_15.jpg">
+              <source src="./static/videos/realworld/t2_failure_15.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_16.jpg">
+              <source src="./static/videos/realworld/t2_failure_16.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t2_failure_17.jpg">
+              <source src="./static/videos/realworld/t2_failure_17.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        </div>
+      </div>
+    </div>
+    <div class="sec-panel sec-panel-hidden" id="rw-panel-3">
+      <p class="sec-panel-desc"><strong>Task III &mdash; Slide &amp; Pull.</strong> Slide the object inward, pull it out, then place it in the purple container.</p>
+      <h4 class="subsec-heading" style="margin-top:0;">Success</h4>
+      <div class="taskstrip" data-autoscroll="1">
+        <div class="taskstrip__track">
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_1.jpg">
+              <source src="./static/videos/realworld/t3_success_1.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_2.jpg">
+              <source src="./static/videos/realworld/t3_success_2.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_3.jpg">
+              <source src="./static/videos/realworld/t3_success_3.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_4.jpg">
+              <source src="./static/videos/realworld/t3_success_4.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_5.jpg">
+              <source src="./static/videos/realworld/t3_success_5.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_6.jpg">
+              <source src="./static/videos/realworld/t3_success_6.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_7.jpg">
+              <source src="./static/videos/realworld/t3_success_7.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_8.jpg">
+              <source src="./static/videos/realworld/t3_success_8.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_9.jpg">
+              <source src="./static/videos/realworld/t3_success_9.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_10.jpg">
+              <source src="./static/videos/realworld/t3_success_10.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_11.jpg">
+              <source src="./static/videos/realworld/t3_success_11.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_12.jpg">
+              <source src="./static/videos/realworld/t3_success_12.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_13.jpg">
+              <source src="./static/videos/realworld/t3_success_13.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_14.jpg">
+              <source src="./static/videos/realworld/t3_success_14.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_15.jpg">
+              <source src="./static/videos/realworld/t3_success_15.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_16.jpg">
+              <source src="./static/videos/realworld/t3_success_16.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_17.jpg">
+              <source src="./static/videos/realworld/t3_success_17.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_18.jpg">
+              <source src="./static/videos/realworld/t3_success_18.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_19.jpg">
+              <source src="./static/videos/realworld/t3_success_19.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_20.jpg">
+              <source src="./static/videos/realworld/t3_success_20.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_21.jpg">
+              <source src="./static/videos/realworld/t3_success_21.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_22.jpg">
+              <source src="./static/videos/realworld/t3_success_22.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_23.jpg">
+              <source src="./static/videos/realworld/t3_success_23.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_24.jpg">
+              <source src="./static/videos/realworld/t3_success_24.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_25.jpg">
+              <source src="./static/videos/realworld/t3_success_25.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_26.jpg">
+              <source src="./static/videos/realworld/t3_success_26.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_27.jpg">
+              <source src="./static/videos/realworld/t3_success_27.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_28.jpg">
+              <source src="./static/videos/realworld/t3_success_28.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_29.jpg">
+              <source src="./static/videos/realworld/t3_success_29.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_30.jpg">
+              <source src="./static/videos/realworld/t3_success_30.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_31.jpg">
+              <source src="./static/videos/realworld/t3_success_31.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_32.jpg">
+              <source src="./static/videos/realworld/t3_success_32.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_33.jpg">
+              <source src="./static/videos/realworld/t3_success_33.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_34.jpg">
+              <source src="./static/videos/realworld/t3_success_34.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_success_35.jpg">
+              <source src="./static/videos/realworld/t3_success_35.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        </div>
+      </div>
+      <h4 class="subsec-heading">Failure</h4>
+      <div class="taskstrip" data-autoscroll="1">
+        <div class="taskstrip__track">
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_1.jpg">
+              <source src="./static/videos/realworld/t3_failure_1.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_2.jpg">
+              <source src="./static/videos/realworld/t3_failure_2.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_3.jpg">
+              <source src="./static/videos/realworld/t3_failure_3.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_4.jpg">
+              <source src="./static/videos/realworld/t3_failure_4.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_5.jpg">
+              <source src="./static/videos/realworld/t3_failure_5.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_6.jpg">
+              <source src="./static/videos/realworld/t3_failure_6.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_7.jpg">
+              <source src="./static/videos/realworld/t3_failure_7.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_8.jpg">
+              <source src="./static/videos/realworld/t3_failure_8.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_9.jpg">
+              <source src="./static/videos/realworld/t3_failure_9.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_10.jpg">
+              <source src="./static/videos/realworld/t3_failure_10.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t3_failure_11.jpg">
+              <source src="./static/videos/realworld/t3_failure_11.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        </div>
+      </div>
+    </div>
+    <div class="sec-panel sec-panel-hidden" id="rw-panel-4">
+      <p class="sec-panel-desc"><strong>Task IV &mdash; Twist &amp; Extract.</strong> Twist the object 90 degrees and pull it out from the shaft, then place it in the purple container.</p>
+      <h4 class="subsec-heading" style="margin-top:0;">Success</h4>
+      <div class="taskstrip" data-autoscroll="1">
+        <div class="taskstrip__track">
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_1.jpg">
+              <source src="./static/videos/realworld/t4_success_1.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_2.jpg">
+              <source src="./static/videos/realworld/t4_success_2.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_3.jpg">
+              <source src="./static/videos/realworld/t4_success_3.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_4.jpg">
+              <source src="./static/videos/realworld/t4_success_4.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_5.jpg">
+              <source src="./static/videos/realworld/t4_success_5.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_6.jpg">
+              <source src="./static/videos/realworld/t4_success_6.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_7.jpg">
+              <source src="./static/videos/realworld/t4_success_7.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_8.jpg">
+              <source src="./static/videos/realworld/t4_success_8.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_9.jpg">
+              <source src="./static/videos/realworld/t4_success_9.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_10.jpg">
+              <source src="./static/videos/realworld/t4_success_10.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_11.jpg">
+              <source src="./static/videos/realworld/t4_success_11.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_12.jpg">
+              <source src="./static/videos/realworld/t4_success_12.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_13.jpg">
+              <source src="./static/videos/realworld/t4_success_13.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_14.jpg">
+              <source src="./static/videos/realworld/t4_success_14.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_15.jpg">
+              <source src="./static/videos/realworld/t4_success_15.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_16.jpg">
+              <source src="./static/videos/realworld/t4_success_16.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_17.jpg">
+              <source src="./static/videos/realworld/t4_success_17.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-success-badge">Success</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_success_18.jpg">
+              <source src="./static/videos/realworld/t4_success_18.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        </div>
+      </div>
+      <h4 class="subsec-heading">Failure</h4>
+      <div class="taskstrip" data-autoscroll="1">
+        <div class="taskstrip__track">
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_failure_1.jpg">
+              <source src="./static/videos/realworld/t4_failure_1.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_failure_2.jpg">
+              <source src="./static/videos/realworld/t4_failure_2.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_failure_3.jpg">
+              <source src="./static/videos/realworld/t4_failure_3.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_failure_4.jpg">
+              <source src="./static/videos/realworld/t4_failure_4.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_failure_5.jpg">
+              <source src="./static/videos/realworld/t4_failure_5.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_failure_6.jpg">
+              <source src="./static/videos/realworld/t4_failure_6.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_failure_7.jpg">
+              <source src="./static/videos/realworld/t4_failure_7.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_failure_8.jpg">
+              <source src="./static/videos/realworld/t4_failure_8.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        <figure class="taskstrip__item">
+          <div class="video-card-media" data-player>
+            <span class="video-fail-badge">Failure</span>
+            <video muted loop playsinline preload="none" poster="./static/images/posters/realworld/t4_failure_9.jpg">
+              <source src="./static/videos/realworld/t4_failure_9.mp4" type="video/mp4">
+            </video>
+          </div>
+        </figure>
+        </div>
+      </div>
+    </div>
+    <p class="tbl-cap" style="text-align:center;">
+      A sample of PHR-VLA rollouts across all four tasks, including both successes and failures. Click any clip to expand it.
+    </p>
+
+    <h4 class="subsec-heading">Real-World Success Rate</h4>
+    <div class="realworld-chart-card reveal-block">
+      <div class="fmp-bar-chart" data-chart="realworld"></div>
+    </div>
+    <p class="tbl-cap" style="text-align:center;">
+      <strong>Real-world disassembly success rate.</strong> PHR-VLA (SigLIP) raises total success from 63.3%
+      (SmolVLA) to 82.5%, with the largest gains on Task IV &mdash; the most contact-rich, twist-and-extract task.
+    </p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ===================== PART II: HOW IT COMPARES ===================== -->
+<div class="part sec-white" id="part-2">
+  <div class="wrap wrap--wide reveal-block">
+    <div class="part__in">
+      <div class="part__head">
+        <div class="part__n">Part II</div>
+        <h2 class="part__t">How It Compares</h2>
+      </div>
+      <p class="part__d">Five controlled ablations isolate which design choices &mdash; camera view, target
+      granularity, target formulation, loss weight, and encoder &mdash; drive the gains.</p>
+    </div>
+  </div>
+
+  <!-- ===================== ABLATIONS ===================== -->
+  <div class="wrap wrap--wide" id="ablation" style="padding-top:2.2rem; padding-bottom:1rem;">
+    <h3 class="subsec-heading" style="margin-top:0;"><span class="sec__no">03</span>Ablations</h3>
+
+    <div class="sec-tab-nav" role="tablist">
+      <button class="sec-tab active" data-panel="panel-camview">Camera View</button>
+      <button class="sec-tab" data-panel="panel-granularity">Target Granularity</button>
+      <button class="sec-tab" data-panel="panel-dynamics">Dynamics vs. Absolute</button>
+      <button class="sec-tab" data-panel="panel-lambda">Loss Weight &lambda;</button>
+      <button class="sec-tab" data-panel="panel-encoder">Encoder Choice</button>
+    </div>
+
+    <!-- Camera View -->
+    <div class="sec-panel" id="panel-camview">
+      <p class="sec-panel-desc">
+        We compare three views for the auxiliary target: wrist-mounted, fixed third-person, and a
+        multi-camera variant that concatenates latents from both, using patch-level, latent-dynamics
+        supervision at &lambda; = 0.02. All three views improve over the SmolVLA baseline (84.1%), but the
+        wrist camera yields the largest gain (88.4%) because it captures the short-range, contact-centric
+        interactions that are most task-relevant over the planning horizon.
+      </p>
+      <div class="fmp-bar-chart" data-chart="camview"></div>
+    </div>
+
+    <!-- Target Granularity -->
+    <div class="sec-panel sec-panel-hidden" id="panel-granularity">
+      <p class="sec-panel-desc">
+        We compare patch-level against mean-pooled latent targets under latent-dynamics supervision at
+        &lambda; = 0.02, across all three camera views. Patch-level supervision outperforms mean pooling in
+        every view: mean-pooling discards <em>where</em> the scene changes, whereas patch-level targets
+        retain per-region dynamics, giving the future head a denser and more spatially grounded signal.
+      </p>
+      <div class="fmp-bar-chart" data-chart="granularity"></div>
+    </div>
+
+    <!-- Dynamics vs Absolute -->
+    <div class="sec-panel sec-panel-hidden" id="panel-dynamics">
+      <p class="sec-panel-desc">
+        We compare our latent-dynamics target against directly supervising absolute future latents, holding
+        view, granularity, and &lambda; fixed. Supervising change rather than absolute content relieves the
+        future head of reconstructing static, task-irrelevant scene content already present in the current
+        observation, concentrating the training signal on action-relevant scene evolution.
+      </p>
+      <div class="fmp-bar-chart" data-chart="dynamics"></div>
+    </div>
+
+    <!-- Loss Weight -->
+    <div class="sec-panel sec-panel-hidden" id="panel-lambda">
+      <p class="sec-panel-desc">
+        We sweep the auxiliary loss weight &lambda; using patch-level, wrist-camera, latent-dynamics
+        supervision. Increasing &lambda; from 0.005 to 0.02 improves the average LIBERO success rate from
+        85.8% to 88.4%; we adopt &lambda; = 0.02 as our default auxiliary loss weight.
+      </p>
+      <div class="fmp-bar-chart" data-chart="lambda"></div>
+    </div>
+
+    <!-- Encoder Choice -->
+    <div class="sec-panel sec-panel-hidden" id="panel-encoder">
+      <p class="sec-panel-desc">
+        PHR-VLA is agnostic to the frozen encoder used to compute planning-horizon targets. We compare
+        SigLIP, a vision-language-aligned image encoder, against V-JEPA 2, a self-supervised video encoder
+        trained explicitly for dynamics prediction. Both encoders consistently exceed their respective
+        no-future-supervision baselines across all three benchmarks.
+      </p>
+      <div class="tbl-scroll">
+        <table class="bt">
+          <thead>
+            <tr><th class="left">Benchmark</th><th>SmolVLA</th><th>PHR-VLA (SigLIP)</th><th>PHR-VLA (JEPA)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="left">LIBERO (wrist, patch, dynamics)</td><td>84.1%</td><td><span class="bv">88.4%</span></td><td>86.2%</td></tr>
+            <tr><td class="left">Meta-World (patch, dynamics)</td><td>56.7%</td><td>57.8%</td><td><span class="bv">59.8%</span></td></tr>
+            <tr class="ours"><td class="left">Real-world disassembly</td><td>63.3%</td><td><span class="bv">82.5%</span></td><td>77.5%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="tbl-cap">On LIBERO and real-world disassembly, SigLIP is the stronger target encoder; on Meta-World, JEPA (with mean-pooled targets) is slightly stronger, reaching 59.8%.</p>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================== CONCLUSION & LIMITATIONS ===================== -->
+<section class="sec sec-white" id="conclusion">
+  <div class="wrap wrap--mid reveal-block">
+    <h2 class="sec-heading">Conclusion and Limitations</h2>
+    <div class="content" style="font-size:0.95rem; line-height:1.75; color:var(--ink-dim);">
+      <p>
+        PHR-VLA is a training-time planning-horizon supervision framework for VLA policies. It aligns
+        action-token representations with privileged latent dynamics computed from planning-horizon
+        demonstration frames, then discards the future head and auxiliary encoder at inference. PHR-VLA
+        improves success rate consistently across standard manipulation benchmarks and real-world
+        disassembly tasks. Our ablations further show that target structure, not merely the presence of a
+        future-prediction objective, drives the gain: patch-level targets outperform mean-pooled targets,
+        wrist-camera supervision outperforms third-person and multi-camera supervision, and supervising
+        latent dynamics outperforms supervising absolute future latents, consistently across the
+        configurations we tested.
+      </p>
+    </div>
+
+    <div class="limitgrid">
+      <div class="limit-card">
+        <h4>Training-time only, no test-time correction</h4>
+        <p>PHR-VLA is an auxiliary training objective, not an inference-time planner or world model: it
+        only shapes the policy&rsquo;s representations during fine-tuning and performs no test-time
+        correction.</p>
+      </div>
+      <div class="limit-card">
+        <h4>Vision-only future targets</h4>
+        <p>The future head is currently supervised purely from RGB latent dynamics. Extending it with
+        tactile or force-aware future targets, and object-centric patch supervision, are promising
+        directions for future work.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===================== BIBTEX ===================== -->
+<section class="sec sec-gray" id="bibtex">
+  <div class="wrap wrap--mid content">
+    <h2 class="sec-heading">BibTeX</h2>
+  <pre style="background:var(--card-hi); color:var(--ink); border-radius:8px; padding:1.2rem 1.4rem; font-size:0.84rem; border:1px solid var(--line);"><code>@article{anonymous2026phrvla,
+  title   = {PHR-VLA: Planning Horizon Reasoning for Vision-Language-Action Models},
+  author  = {Anonymous Authors},
+  journal = {Anonymous submission},
+  year    = {2026}
+}</code></pre>
+  </div>
+</section>
+
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="content has-text-centered">
+      <a class="icon-link" href="#" title="Code (Coming Soon)"><i class="fab fa-github"></i></a>
+    </div>
+    <div class="wrap--mid" style="margin:0 auto;">
+      <div class="content has-text-centered" style="font-size:0.83rem; color:var(--ink-mute);">
+        <p>
+          This website is built on the
+          <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a> template, licensed under
+          <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.
+        </p>
+        <p>The visual design of this page follows the Flex-&pi; project page.</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
