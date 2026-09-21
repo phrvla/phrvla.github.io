@@ -14,7 +14,7 @@
     // ── LIBERO main results (Table I) ─────────────────────────────────────
     libero: {
       title: "Success Rate",
-      sub: "LIBERO · four task suites, 300 trials per suite",
+      sub: "LIBERO · four task suites, 500 episodes per suite",
       groups: [
         { label: "Baselines", methods: ["act", "dp", "octo", "dit", "openvla", "smolvla"] },
         { label: "Ours", methods: ["ours"] }
